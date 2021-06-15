@@ -76,17 +76,27 @@ addEventListener('scheduled', event => {
   event.waitUntil(handleScheduled(event))
 })
 
+const MOVIE_CONFIG = 'movie_config'
+const MOVIE_PAGE = 'movie_page'
+
 async function handleScheduled(event) {
   try {
-    let moviesData = await _getTableDataWithName('master_movies')
-    let {currentPage = 0, movies = []} = moviesData;
-    let result = await cronGetMoviesPage(currentPage + 1);
+    let moviesData = await _getTableDataWithName(MOVIE_CONFIG)
+    let {currentPage = 0} = moviesData;
+    let newCurrentPage = currentPage + 1
+    let result = await cronGetMoviesPage(newCurrentPage);
     if (!result) return;
     let pageMovies = {
-      currentPage: currentPage + 1,
-      movies: [...movies, ...result]
+      currentPage: newCurrentPage,
+      movies: result
     };
-    await VIDNEXT_DB.put('master_movies', JSON.stringify(pageMovies))
+
+    // Store config movies each crawl
+    await VIDNEXT_DB.put(MOVIE_CONFIG, JSON.stringify({
+      currentPage: newCurrentPage
+    }))
+
+    await VIDNEXT_DB.put(MOVIE_PAGE + '_' + newCurrentPage, JSON.stringify(pageMovies))
   } catch (error) {
     console.log('error', error)
   }
