@@ -2,6 +2,7 @@ import html from './html.js'
 import contentTypes from './content-types.js'
 import Scraper from './scraper.js'
 import { generateJSONResponse, generateErrorJSONResponse } from './json-response.js'
+import { cronGetMoviesPage } from './cron.js'
 
 addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
@@ -33,6 +34,10 @@ async function handleSiteRequest(request) {
       headers: { 'content-type': contentTypes.html }
     })
   }
+  if (url.pathname === '/test') {
+    let result = await cronGetMoviesPage();
+    return generateJSONResponse({ result }, true)
+  }
 
   return new Response('Not found', { status: 404 })
 }
@@ -58,4 +63,31 @@ async function handleAPIRequest({ url, selector, attr, spaced, pretty }) {
   }
 
   return generateJSONResponse({ result }, pretty)
+}
+
+async function _getTableDataWithName(nameOfTable = '') {
+  if (!nameOfTable) return {}
+  let listMovieJson = await VIDNEXT_DB.get(nameOfTable)
+  return listMovieJson ? JSON.parse(listMovieJson) : {}
+}
+
+// Cronjob
+addEventListener('scheduled', event => {
+  event.waitUntil(handleScheduled(event))
+})
+
+async function handleScheduled(event) {
+  try {
+    let moviesData = await _getTableDataWithName('master_movies')
+    let {currentPage = 0, movies = []} = moviesData;
+    let result = await cronGetMoviesPage(currentPage + 1);
+    if (!result) return;
+    let pageMovies = {
+      currentPage: currentPage + 1,
+      movies: [...movies, ...result]
+    };
+    await VIDNEXT_DB.put('master_movies', JSON.stringify(pageMovies))
+  } catch (error) {
+    console.log('error', error)
+  }
 }

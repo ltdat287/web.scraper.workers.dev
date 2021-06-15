@@ -1,4 +1,7 @@
-name = "web"
-account_id = "2575000dd90a08dbbeb2b8cca2e64775" # scraper.workers.dev
+name = "web_scraper"
+account_id = "c797f9312e3d00dba5a4364bf6982cc6" # scraper.workers.dev
 type = "webpack"
 workers_dev = true
+kv_namespaces = [
+  { binding = "VIDNEXT_DB", id = "05793f3b49f243909c42935753f2520f" },
+]

@@ -84,6 +84,18 @@ class Scraper {
     return selectors.length === 1 ? matches[selectors[0]] : matches
   }
 
+  // async getTagNameCount() {
+  //   let tags = []
+  //   class TagScraper {
+  //     element(element) {
+  //       tags.push(element.tagName)
+  //     }
+  //   }
+  //   const scraper = new TagScraper()
+  //   await new HTMLRewriter().on(this.selector, scraper).transform(this.response).arrayBuffer()
+  //   return tags.length
+  // }
+
   async getAttribute(attribute) {
     class AttributeScraper {
       constructor(attr) {
@@ -102,6 +114,75 @@ class Scraper {
     await new HTMLRewriter().on(this.selector, scraper).transform(this.response).arrayBuffer()
 
     return scraper.value || ''
+  }
+
+  async getLinkMovies({
+    parent_selector = '',
+    link_selector = '',
+    title_selector = '',
+    date_selector = '',
+    page = 1
+  }) {
+    let linkMatches = [];
+    if (!!link_selector) {
+      let selector = parent_selector + ' > ' + link_selector;
+       this.rewriter.on(selector, {
+        element(element) {
+          let link = element.getAttribute('href');
+          linkMatches.push(link);
+        }
+      })
+    }
+
+    let titleMatches = [];
+    if (!!title_selector) {
+      let selector = parent_selector + ' > ' + title_selector;
+      let nextText = '';
+       this.rewriter.on(selector, {
+        text(text) {
+          nextText += text.text
+
+          if (text.lastInTextNode) {
+            nextText += ' '
+            titleMatches.push(nextText)
+            nextText = ''
+          }
+        }
+      })
+    }
+    
+    let dateMatches = [];
+    if (!!date_selector) {
+      let selector = parent_selector + ' > ' + date_selector;
+      let nextText = '';
+       this.rewriter.on(selector, {
+        text(text) {
+          nextText += text.text
+
+          if (text.lastInTextNode) {
+            nextText += ' '
+            dateMatches.push(nextText)
+            nextText = ''
+          }
+        }
+      })
+    }
+
+    const transformed = this.rewriter.transform(this.response)
+    await transformed.arrayBuffer()
+    if (linkMatches.length) {
+      return linkMatches.map((link, index) => {
+        console.log('link, index', link, index);
+        return {
+          link: link,
+          title: cleanText(titleMatches[index]) || '',
+          date: cleanText(dateMatches[index]) || '',
+          page
+        };
+      });
+    }
+
+    return null;
   }
 }
 
