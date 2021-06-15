@@ -172,7 +172,6 @@ class Scraper {
     await transformed.arrayBuffer()
     if (linkMatches.length) {
       return linkMatches.map((link, index) => {
-        console.log('link, index', link, index);
         return {
           link: link,
           title: cleanText(titleMatches[index]) || '',
